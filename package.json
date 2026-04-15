@@ -2,6 +2,7 @@
   "name": "artisan",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "yarn@4.13.0",
   "scripts": {
     "dev": "concurrently \"yarn dev:ui\" \"yarn dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
     "dev:debug": "LOG_LEVEL=debug yarn dev",

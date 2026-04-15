@@ -5,7 +5,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import ParseResult, urlparse, urlunparse
 
 import httpx
 import websockets
@@ -50,7 +50,7 @@ _LOOPBACK_PROXY_HOST = "127.0.0.1"
 class PreviewRoute:
     """Resolved routing info for a Daytona preview URL."""
 
-    parsed: object
+    parsed: ParseResult
     connect_host: str
     connect_port: int
     host_header: str
@@ -252,15 +252,19 @@ async def proxy_http_request(
     if route.loopback_override:
         headers["Host"] = route.host_header
 
-    client_kwargs = {
-        "follow_redirects": True,
-        "timeout": 60.0,
-    }
     if route.loopback_override:
-        client_kwargs["trust_env"] = False
-
-    async with httpx.AsyncClient(**client_kwargs) as client:
-        resp = await client.request(method, upstream, headers=headers, content=body if body else None)
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=60.0,
+            trust_env=False,
+        ) as client:
+            resp = await client.request(method, upstream, headers=headers, content=body if body else None)
+    else:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=60.0,
+        ) as client:
+            resp = await client.request(method, upstream, headers=headers, content=body if body else None)
 
     response_headers = _filter_incoming_headers(resp.headers.items())
     content_type = resp.headers.get("content-type", "")
@@ -317,22 +321,29 @@ async def proxy_websocket(
             pass
 
     try:
-        connect_kwargs = {
-            "additional_headers": extra_headers,
-            "subprotocols": subprotocols,
-            "ping_interval": 20,
-            "ping_timeout": 20,
-            "close_timeout": 2,
-        }
         if route.loopback_override:
-            connect_kwargs["host"] = route.connect_host
-            connect_kwargs["port"] = route.connect_port
-            connect_kwargs["proxy"] = None
+            upstream_connection = websockets.connect(
+                upstream_ws,
+                additional_headers=extra_headers,
+                subprotocols=subprotocols,
+                ping_interval=20,
+                ping_timeout=20,
+                close_timeout=2,
+                host=route.connect_host,
+                port=route.connect_port,
+                proxy=None,
+            )
+        else:
+            upstream_connection = websockets.connect(
+                upstream_ws,
+                additional_headers=extra_headers,
+                subprotocols=subprotocols,
+                ping_interval=20,
+                ping_timeout=20,
+                close_timeout=2,
+            )
 
-        async with websockets.connect(
-            upstream_ws,
-            **connect_kwargs,
-        ) as upstream:
+        async with upstream_connection as upstream:
             async def client_to_upstream():
                 try:
                     while True:

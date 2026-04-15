@@ -1,6 +1,6 @@
 from importlib import import_module
 from types import ModuleType
-
+from typing import Any, cast
 
 lifespan_module = import_module("lifespan")
 
@@ -12,7 +12,7 @@ def test_load_embedding_model_prefers_local_files(monkeypatch) -> None:
         def __init__(self, model_name: str, **kwargs) -> None:
             calls.append({"model_name": model_name, **kwargs})
 
-    fake_module = ModuleType("sentence_transformers")
+    fake_module = cast(Any, ModuleType("sentence_transformers"))
     fake_module.SentenceTransformer = _FakeSentenceTransformer
     monkeypatch.setattr(
         lifespan_module,
@@ -40,7 +40,7 @@ def test_load_embedding_model_falls_back_to_online_download(monkeypatch) -> None
             if kwargs.get("local_files_only") is True:
                 raise OSError("missing local cache")
 
-    fake_module = ModuleType("sentence_transformers")
+    fake_module = cast(Any, ModuleType("sentence_transformers"))
     fake_module.SentenceTransformer = _FakeSentenceTransformer
     monkeypatch.setattr(
         lifespan_module,
