@@ -121,6 +121,14 @@ cd docker/daytona && ./setup_snapshot.sh
 ```
 
 > 脚本会读取 `.env` 中的 Daytona 配置，通过 API 将 `Dockerfile.sandbox` 构建为沙盒快照。
+>
+> 同时请确保部署机上的 `proxy.localhost` 能解析到回环地址（`127.0.0.1`）。至少应满足：
+>
+> ```bash
+> getent hosts proxy.localhost
+> ```
+>
+> 返回 `127.0.0.1 proxy.localhost`。如果要使用 Daytona 终端预览，`*.proxy.localhost` 也必须能正确指向本机。
 
 ### 5. 启动开发服务器
 

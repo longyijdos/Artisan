@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -41,6 +42,19 @@ _HOP_BY_HOP_HEADERS = {
 _DROP_RESPONSE_HEADERS = {
     "content-security-policy",
 }
+
+_LOOPBACK_PROXY_HOST = "127.0.0.1"
+
+
+@dataclass(frozen=True)
+class PreviewRoute:
+    """Resolved routing info for a Daytona preview URL."""
+
+    parsed: object
+    connect_host: str
+    connect_port: int
+    host_header: str
+    loopback_override: bool
 
 
 def _daytona_api_key() -> str:
@@ -152,11 +166,47 @@ async def get_preview_url(session_id: str) -> str:
     return await _daytona_client.get_terminal_url(sandbox_id)
 
 
-def build_upstream_url(preview_url: str, path: str, query: str) -> str:
+def _should_use_loopback_proxy(hostname: str | None) -> bool:
+    return hostname == "proxy.localhost" or (
+        hostname is not None and hostname.endswith(".proxy.localhost")
+    )
+
+
+def resolve_preview_route(preview_url: str) -> PreviewRoute:
+    """Resolve how the proxy should connect to a preview URL."""
+    parsed = urlparse(preview_url)
+    if not parsed.hostname:
+        raise ValueError(f"Invalid preview URL: {preview_url}")
+
+    loopback_override = _should_use_loopback_proxy(parsed.hostname)
+    connect_host = _LOOPBACK_PROXY_HOST if loopback_override else parsed.hostname
+    connect_port = parsed.port or (443 if parsed.scheme == "https" else 80)
+
+    return PreviewRoute(
+        parsed=parsed,
+        connect_host=connect_host,
+        connect_port=connect_port,
+        host_header=parsed.netloc,
+        loopback_override=loopback_override,
+    )
+
+
+def build_upstream_url(
+    preview_url: str,
+    path: str,
+    query: str,
+    *,
+    connect_host: str | None = None,
+    connect_port: int | None = None,
+) -> str:
     """Build the upstream URL from a preview base, sub-path, and query string."""
     parsed = urlparse(preview_url)
     upstream_path = path if path and path.startswith("/") else ("/" + path if path else "/")
-    return urlunparse((parsed.scheme, parsed.netloc, upstream_path, "", query, ""))
+    netloc = parsed.netloc
+    if connect_host is not None:
+        port = connect_port or parsed.port
+        netloc = f"{connect_host}:{port}" if port is not None else connect_host
+    return urlunparse((parsed.scheme, netloc, upstream_path, "", query, ""))
 
 
 # ---------------------------------------------------------------------------
@@ -187,13 +237,29 @@ async def proxy_http_request(
     session_id: str,
 ) -> ProxyHttpResult:
     """Forward an HTTP request to the upstream Daytona terminal and return the result."""
-    upstream = build_upstream_url(preview_url, path, query)
+    route = resolve_preview_route(preview_url)
+    upstream = build_upstream_url(
+        preview_url,
+        path,
+        query,
+        connect_host=route.connect_host if route.loopback_override else None,
+        connect_port=route.connect_port if route.loopback_override else None,
+    )
 
     headers = _filter_outgoing_headers(raw_headers)
     headers["Authorization"] = f"Bearer {_daytona_api_key()}"
     headers["Accept-Encoding"] = "identity"
+    if route.loopback_override:
+        headers["Host"] = route.host_header
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
+    client_kwargs = {
+        "follow_redirects": True,
+        "timeout": 60.0,
+    }
+    if route.loopback_override:
+        client_kwargs["trust_env"] = False
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
         resp = await client.request(method, upstream, headers=headers, content=body if body else None)
 
     response_headers = _filter_incoming_headers(resp.headers.items())
@@ -226,7 +292,8 @@ async def proxy_websocket(
     session_id: str,
 ) -> None:
     """Bidirectional WebSocket proxy between client and upstream."""
-    parsed = urlparse(preview_url)
+    route = resolve_preview_route(preview_url)
+    parsed = route.parsed
     scheme = "wss" if parsed.scheme == "https" else "ws"
     upstream_path = path if path.startswith("/") else ("/" + path if path else "/")
     upstream_ws = urlunparse((scheme, parsed.netloc, upstream_path, "", query, ""))
@@ -250,13 +317,21 @@ async def proxy_websocket(
             pass
 
     try:
+        connect_kwargs = {
+            "additional_headers": extra_headers,
+            "subprotocols": subprotocols,
+            "ping_interval": 20,
+            "ping_timeout": 20,
+            "close_timeout": 2,
+        }
+        if route.loopback_override:
+            connect_kwargs["host"] = route.connect_host
+            connect_kwargs["port"] = route.connect_port
+            connect_kwargs["proxy"] = None
+
         async with websockets.connect(
             upstream_ws,
-            additional_headers=extra_headers,
-            subprotocols=subprotocols,
-            ping_interval=20,
-            ping_timeout=20,
-            close_timeout=2,
+            **connect_kwargs,
         ) as upstream:
             async def client_to_upstream():
                 try:

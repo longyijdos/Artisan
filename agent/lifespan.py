@@ -24,9 +24,18 @@ def _load_embedding_model(model_name: str) -> None:
     try:
         from sentence_transformers import SentenceTransformer
 
-        model = SentenceTransformer(model_name, device="cpu")
+        try:
+            model = SentenceTransformer(
+                model_name,
+                device="cpu",
+                local_files_only=True,
+            )
+            print(f"✅ Embedding model loaded from local cache: {model_name}")
+        except Exception:
+            model = SentenceTransformer(model_name, device="cpu")
+            print(f"✅ Embedding model downloaded/loaded: {model_name}")
+
         set_embedding_model(model)
-        print(f"✅ Embedding model loaded: {model_name}")
     except Exception as exc:
         print(f"⚠️  Failed to load embedding model: {exc}")
 
