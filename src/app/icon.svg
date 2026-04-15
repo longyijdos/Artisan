@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <!-- Hammer -->
+  <path d="M8 8L14 14M14 14L6 22L10 26L18 18M14 14L20 8L26 14L20 20" stroke="#4F46E5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Chisel accent -->
+  <path d="M22 22L28 28" stroke="#818CF8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

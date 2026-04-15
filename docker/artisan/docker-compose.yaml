@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: artisan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: artisan
+      POSTGRES_PASSWORD: artisan123
+      POSTGRES_DB: artisan
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - artisan-network
+
+volumes:
+  postgres_data:
+
+networks:
+  artisan-network:
+    driver: bridge

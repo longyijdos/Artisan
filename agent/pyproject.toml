@@ -1,0 +1,86 @@
+[project]
+name = "artisan"
+version = "0.1.0"
+description = "Artisan - AI Agent with LangGraph, sandbox environment, web search, and skill system"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-dotenv",
+    "pydantic",
+    "httpx",
+    "python-multipart",  # Required for FastAPI file uploads
+    "psycopg[binary]",
+    "psycopg-pool",
+    # LangGraph dependencies
+    "langgraph>=0.2.0",
+    "langchain-openai>=0.2.0",
+    "langchain-deepseek>=0.1.0",
+    "langchain-core>=0.3.0",
+    "langgraph-checkpoint-postgres",
+    # Observability
+    "langfuse>=3.11.2",
+    # Web search & fetch
+    "tavily-python",
+    "trafilatura",
+    # Skill frontmatter parsing
+    "python-frontmatter",
+    # Sandbox
+    "daytona",
+    # RAG knowledge base
+    "sentence-transformers",
+    "pgvector",
+    "langchain-text-splitters",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "ruff>=0.13.2",
+    "types-PyYAML>=6.0.12.20250915",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    ".venv",
+    "__pycache__",
+    "skills",
+]
+
+[tool.ruff.lint]
+select = ["E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+known-first-party = [
+    "models",
+    "routers",
+    "sandbox",
+    "schemas",
+    "services",
+    "tools",
+    "utils",
+]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["."]
+exclude = [
+    "(^|/)\\.venv/",
+    "(^|/)__pycache__/",
+    "^skills/",
+]
+follow_imports = "silent"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_unused_ignores = true

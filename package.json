@@ -1,0 +1,60 @@
+{
+  "name": "artisan",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"yarn dev:ui\" \"yarn dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
+    "dev:debug": "LOG_LEVEL=debug yarn dev",
+    "dev:agent": "cd agent && TZ=UTC uv run main.py",
+    "dev:ui": "next dev --turbopack -p 8665",
+    "build": "next build",
+    "start": "concurrently \"next start -p 8665\" \"yarn dev:agent\" --names ui,agent --prefix-colors blue,green --kill-others",
+    "lint": "yarn lint:ui && yarn lint:agent",
+    "lint:ui": "eslint .",
+    "lint:agent": "cd agent && uv run ruff check .",
+    "typecheck:ui": "tsc --noEmit",
+    "typecheck:agent": "cd agent && uv run mypy",
+    "test:agent": "cd agent && uv run pytest",
+    "check:agent": "cd agent && uv run ruff check . && uv run mypy && uv run pytest",
+    "verify": "yarn lint && yarn typecheck:ui && yarn typecheck:agent && yarn test:agent && yarn build",
+    "install:agent": "cd agent && uv sync",
+    "postinstall": "yarn install:agent",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "eventsource-parser": "^3.0.1",
+    "framer-motion": "^12.34.0",
+    "katex": "^0.16.38",
+    "next": "16.0.8",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "rxjs": "^7.8.2",
+    "shiki": "^3.19.0",
+    "use-stick-to-bottom": "^1.1.1"
+  },
+  "overrides": {
+    "rxjs": "^7.8.2"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": "eslint --max-warnings 0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.1.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
