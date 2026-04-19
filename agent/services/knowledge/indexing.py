@@ -1,14 +1,14 @@
 """Index files / folders into the knowledge base."""
 
-import asyncio
 import logging
 from dataclasses import dataclass
 
 from sandbox import DaytonaClient
 from utils.db import get_db_connection
-from utils.runtime import require_embedding_model, require_sandbox_pool
+from utils.runtime import require_sandbox_pool
 
 from .chunking import chunk_text, should_skip_file
+from .embeddings import embed_texts
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +19,6 @@ class IndexResult:
     name: str
     source_type: str
     chunk_count: int
-
-
-async def _embed_texts(texts: list[str]) -> list[list[float]]:
-    """Run embedding in a thread to avoid blocking the event loop."""
-    model = require_embedding_model()
-
-    def _encode() -> list[list[float]]:
-        return model.encode(texts, normalize_embeddings=True).tolist()
-
-    return await asyncio.to_thread(_encode)
 
 
 async def _index_single_file(
@@ -55,7 +45,7 @@ async def _index_single_file(
         return None
 
     # Embed all chunks
-    embeddings = await _embed_texts(chunks)
+    embeddings = await embed_texts(chunks)
 
     pool = await get_db_connection()
     async with pool.connection() as conn:

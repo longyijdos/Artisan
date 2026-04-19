@@ -3,7 +3,7 @@ from typing import Optional
 
 from psycopg_pool import AsyncConnectionPool
 
-from config import DATABASE_URL
+from config import DATABASE_URL, EMBEDDING_DIMENSION
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -112,10 +112,10 @@ async def ensure_knowledge_tables():
                 source_id    BIGINT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
                 chunk_index  INTEGER NOT NULL,
                 content      TEXT NOT NULL,
-                embedding    vector(512),
+                embedding    vector(%d),
                 created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-        """)
+        """ % EMBEDDING_DIMENSION)
         await conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_kc_source ON knowledge_chunks (source_id)"
         )

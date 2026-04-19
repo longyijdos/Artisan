@@ -6,6 +6,10 @@ from app import create_app
 from config import (
     DAYTONA_API_KEY,
     DAYTONA_SERVER_URL,
+    EMBEDDING_API_BASE,
+    EMBEDDING_API_KEY,
+    EMBEDDING_DIMENSION,
+    EMBEDDING_MODEL_NAME,
     LLM_MODEL,
     OPENAI_API_BASE,
     OPENAI_API_KEY,
@@ -26,10 +30,19 @@ if __name__ == "__main__":
     if not OPENAI_API_BASE:
         print("ℹ️  Info: OPENAI_API_BASE not set, using default OpenAI endpoint")
         print()
-    
+
     print(f"🤖 Using LLM model: {LLM_MODEL}")
     print()
-    
+
+    if not EMBEDDING_API_KEY or not EMBEDDING_API_BASE:
+        print("⚠️  Warning: Embedding API configuration incomplete!")
+        print("   Required: EMBEDDING_API_KEY, EMBEDDING_API_BASE")
+        print("   Knowledge indexing and retrieval will be disabled.")
+        print()
+    else:
+        print(f"🧠 Using embedding model: {EMBEDDING_MODEL_NAME} ({EMBEDDING_DIMENSION}d)")
+        print()
+
     if not TAVILY_API_KEY:
         print("⚠️  Warning: TAVILY_API_KEY environment variable not set!")
         print("   Web search functionality will be disabled.")

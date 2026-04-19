@@ -1,63 +1,23 @@
 from importlib import import_module
-from types import ModuleType
-from typing import Any, cast
 
 lifespan_module = import_module("lifespan")
 
 
-def test_load_embedding_model_prefers_local_files(monkeypatch) -> None:
-    calls: list[dict[str, object]] = []
+def test_log_embedding_backend_reports_remote_config(capsys, monkeypatch) -> None:
+    monkeypatch.setattr(lifespan_module, "EMBEDDING_MODEL_NAME", "text-embedding-3-small")
+    monkeypatch.setattr(lifespan_module, "EMBEDDING_DIMENSION", 512)
+    monkeypatch.setattr(lifespan_module, "is_embedding_configured", lambda: True)
 
-    class _FakeSentenceTransformer:
-        def __init__(self, model_name: str, **kwargs) -> None:
-            calls.append({"model_name": model_name, **kwargs})
+    lifespan_module._log_embedding_backend()
 
-    fake_module = cast(Any, ModuleType("sentence_transformers"))
-    fake_module.SentenceTransformer = _FakeSentenceTransformer
-    monkeypatch.setattr(
-        lifespan_module,
-        "set_embedding_model",
-        lambda model: calls.append({"set_model": model}),
-    )
-    monkeypatch.setitem(__import__("sys").modules, "sentence_transformers", fake_module)
-
-    lifespan_module._load_embedding_model("BAAI/bge-small-zh-v1.5")
-
-    assert calls[0] == {
-        "model_name": "BAAI/bge-small-zh-v1.5",
-        "device": "cpu",
-        "local_files_only": True,
-    }
-    assert "set_model" in calls[1]
+    captured = capsys.readouterr()
+    assert "Embedding API configured: text-embedding-3-small (512d)" in captured.out
 
 
-def test_load_embedding_model_falls_back_to_online_download(monkeypatch) -> None:
-    calls: list[dict[str, object]] = []
+def test_log_embedding_backend_reports_missing_config(capsys, monkeypatch) -> None:
+    monkeypatch.setattr(lifespan_module, "is_embedding_configured", lambda: False)
 
-    class _FakeSentenceTransformer:
-        def __init__(self, model_name: str, **kwargs) -> None:
-            calls.append({"model_name": model_name, **kwargs})
-            if kwargs.get("local_files_only") is True:
-                raise OSError("missing local cache")
+    lifespan_module._log_embedding_backend()
 
-    fake_module = cast(Any, ModuleType("sentence_transformers"))
-    fake_module.SentenceTransformer = _FakeSentenceTransformer
-    monkeypatch.setattr(
-        lifespan_module,
-        "set_embedding_model",
-        lambda model: calls.append({"set_model": model}),
-    )
-    monkeypatch.setitem(__import__("sys").modules, "sentence_transformers", fake_module)
-
-    lifespan_module._load_embedding_model("BAAI/bge-small-zh-v1.5")
-
-    assert calls[0] == {
-        "model_name": "BAAI/bge-small-zh-v1.5",
-        "device": "cpu",
-        "local_files_only": True,
-    }
-    assert calls[1] == {
-        "model_name": "BAAI/bge-small-zh-v1.5",
-        "device": "cpu",
-    }
-    assert "set_model" in calls[2]
+    captured = capsys.readouterr()
+    assert "Embedding API not configured" in captured.out

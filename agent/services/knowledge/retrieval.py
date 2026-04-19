@@ -1,12 +1,12 @@
 """Retrieve relevant chunks from the knowledge base via cosine similarity."""
 
-import asyncio
 import logging
 from dataclasses import dataclass
 
 from config import RAG_SCORE_THRESHOLD, RAG_TOP_K
 from utils.db import get_db_connection
-from utils.runtime import require_embedding_model
+
+from .embeddings import embed_query
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +15,6 @@ logger = logging.getLogger(__name__)
 class ChunkResult:
     content: str
     score: float
-
-
-async def _embed_query(query: str) -> list[float]:
-    """Embed a query string in a thread."""
-    model = require_embedding_model()
-
-    def _encode() -> list[float]:
-        return model.encode([query], normalize_embeddings=True).tolist()[0]
-
-    return await asyncio.to_thread(_encode)
 
 
 async def search_chunks(
@@ -41,7 +31,7 @@ async def search_chunks(
     *threshold*.
     """
     try:
-        query_embedding = await _embed_query(query)
+        query_embedding = await embed_query(query)
     except Exception as exc:
         logger.error("Failed to embed query: %s", exc)
         return []

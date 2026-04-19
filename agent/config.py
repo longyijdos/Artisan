@@ -26,6 +26,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_API_BASE = os.getenv("OPENAI_API_BASE")
 
 # ---------------------------------------------------------------------------
+# Embeddings
+# ---------------------------------------------------------------------------
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY")
+EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE")
+
+# ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
@@ -55,7 +61,7 @@ MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
 # ---------------------------------------------------------------------------
 # RAG Knowledge Base
 # ---------------------------------------------------------------------------
-EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-small-zh-v1.5")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "text-embedding-3-small")
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "512"))
 RAG_CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "512"))
 RAG_CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "64"))

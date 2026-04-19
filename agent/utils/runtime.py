@@ -55,30 +55,3 @@ def require_sandbox_pool() -> SandboxPool:
     if _sandbox_pool is None:
         raise RuntimeError("sandbox pool not initialized")
     return _sandbox_pool
-
-
-# ---------------------------------------------------------------------------
-# Embedding model
-# ---------------------------------------------------------------------------
-
-from typing import Any  # noqa: E402
-
-_embedding_model: Any | None = None
-
-
-def set_embedding_model(model: Any) -> None:
-    """Register the sentence-transformers embedding model."""
-    global _embedding_model
-    _embedding_model = model
-
-
-def get_embedding_model() -> Any | None:
-    """Return the embedding model instance, or ``None`` if not loaded."""
-    return _embedding_model
-
-
-def require_embedding_model() -> Any:
-    """Return the embedding model, raising when not initialized."""
-    if _embedding_model is None:
-        raise RuntimeError("embedding model not initialized")
-    return _embedding_model

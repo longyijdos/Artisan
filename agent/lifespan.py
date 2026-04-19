@@ -6,11 +6,12 @@ from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 
-from config import DATABASE_URL, EMBEDDING_MODEL_NAME
+from config import DATABASE_URL, EMBEDDING_DIMENSION, EMBEDDING_MODEL_NAME
 from graph import build_graph
 from sandbox import SandboxPool
+from services.knowledge import is_embedding_configured
 from utils.db import close_db_connection, ensure_knowledge_tables
-from utils.runtime import set_embedding_model, set_graph_getter, set_sandbox_pool
+from utils.runtime import set_graph_getter, set_sandbox_pool
 
 _compiled_graph: CompiledStateGraph | None = None
 
@@ -19,25 +20,16 @@ def get_compiled_graph() -> CompiledStateGraph | None:
     return _compiled_graph
 
 
-def _load_embedding_model(model_name: str) -> None:
-    """Load the sentence-transformers embedding model (runs on CPU)."""
-    try:
-        from sentence_transformers import SentenceTransformer
+def _log_embedding_backend() -> None:
+    """Report whether remote embeddings are configured."""
+    if is_embedding_configured():
+        print(
+            f"✅ Embedding API configured: {EMBEDDING_MODEL_NAME} "
+            f"({EMBEDDING_DIMENSION}d)"
+        )
+        return
 
-        try:
-            model = SentenceTransformer(
-                model_name,
-                device="cpu",
-                local_files_only=True,
-            )
-            print(f"✅ Embedding model loaded from local cache: {model_name}")
-        except Exception:
-            model = SentenceTransformer(model_name, device="cpu")
-            print(f"✅ Embedding model downloaded/loaded: {model_name}")
-
-        set_embedding_model(model)
-    except Exception as exc:
-        print(f"⚠️  Failed to load embedding model: {exc}")
+    print("ℹ️  Embedding API not configured; knowledge indexing and retrieval are disabled")
 
 
 @asynccontextmanager
@@ -61,8 +53,7 @@ async def lifespan(_: FastAPI):
 
             set_graph_getter(get_compiled_graph)
 
-            # Load embedding model
-            _load_embedding_model(EMBEDDING_MODEL_NAME)
+            _log_embedding_backend()
 
             sandbox_pool = SandboxPool()
             set_sandbox_pool(sandbox_pool)
@@ -76,5 +67,4 @@ async def lifespan(_: FastAPI):
             await sandbox_pool.stop()
         await close_db_connection()
         set_sandbox_pool(None)
-        set_embedding_model(None)
         print("👋 Shutting down Artisan")

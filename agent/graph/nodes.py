@@ -39,11 +39,10 @@ async def _build_knowledge_context(
         return None
 
     try:
-        from services.knowledge import search_chunks
-        from utils.runtime import get_embedding_model
+        from services.knowledge import is_embedding_configured, search_chunks
 
-        # Bail out early if embedding model is not loaded
-        if get_embedding_model() is None:
+        # Bail out early if embeddings are not configured
+        if not is_embedding_configured():
             return None
 
         # Find the last human message
